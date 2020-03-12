@@ -1,3 +1,10 @@
+/*
+ * adversary.h
+ * Fredrik Pihlqvist  2020-03-XX
+ * 
+ * Adversary header file containing structure and methods used by an adversary.
+ */
+
 #ifndef _ADVERSARY_H_
 #define _ADVERSARY_H_
 
