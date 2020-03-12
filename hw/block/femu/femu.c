@@ -366,7 +366,14 @@ static uint16_t nvme_rw(FemuCtrl *n, NvmeNamespace *ns, NvmeCmd *cmd,
     req->nlb = nlb;
     req->ns = ns;
 
-    ret = femu_rw_mem_backend_bb(&n->mbe, &req->qsg, data_offset, req->is_write);
+    /* Adersary */
+    if (n->adversary.ON) {
+        ret = adversary_rw_mem_backend(&n->adversary, &req->qsg, data_offset, req->is_write);
+    }
+    else {
+        ret = femu_rw_mem_backend_bb(&n->mbe, &req->qsg, data_offset, req->is_write);
+    }
+
     if (!ret) {
         return NVME_SUCCESS;
     }
@@ -1083,6 +1090,8 @@ static void femu_realize(PCIDevice *pci_dev, Error **errp)
     femu_init_mem_backend(&n->mbe, bs_size);
     n->mbe.femu_mode = n->femu_mode;
 
+    adversary_init(&n->adversary, 4096);
+
     n->completed = 0;
     n->start_time = time(NULL);
     n->reg_size = pow2ceil(0x1004 + 2 * (n->num_io_queues + 1) * 4);
@@ -1124,6 +1133,7 @@ static void femu_exit(PCIDevice *pci_dev)
 
     femu_destroy_nvme_poller(n);
     femu_destroy_mem_backend(&n->mbe);
+    adversary_destroy(&n->adversary);
 
     g_free(n->namespaces);
     g_free(n->features.int_vector_config);

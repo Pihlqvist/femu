@@ -10,6 +10,7 @@
 #include "include/pqueue.h"
 
 #include "ftl/ftl.h"
+#include "adversary/adversary.h"
 
 typedef struct NvmeBar {
     uint64_t    cap;
@@ -730,6 +731,12 @@ enum FEMU_OC12_MetaState {
     FEMU_OC12_SEC_ERASED  = 0xDC,
 };
 
+enum FEMU_ADVERSARY_Commands {
+    FEMU_ADVERSARY_CMD_ON = 0x9f,
+    FEMU_ADVERSARY_CMD_P1 = 0xa0,
+    FEMU_ADVERSARY_CMD_P2 = 0xa1,
+};
+
 typedef struct FEMU_OC12_GetL2PTbl {
     uint8_t opcode;
     uint8_t flags;
@@ -1204,6 +1211,8 @@ typedef struct FemuCtrl {
 
     uint8_t         multipoller_enabled;
     uint32_t        num_poller;
+
+    Adversary       adversary;
 } FemuCtrl;
 
 typedef struct NvmePollerThreadArgument {
@@ -1360,6 +1369,9 @@ extern int64_t chnl_page_tr_t;
 
 #define femu_log(fmt, ...) \
     do { printf("FEMU: " fmt, ## __VA_ARGS__); } while (0)
+
+#define adversary_log(fmt, ...) \
+    do { printf("ADVERSARY: " fmt, ## __VA_ARGS__); } while (0)
 
 
 #endif /* __FEMU_NVME_H */

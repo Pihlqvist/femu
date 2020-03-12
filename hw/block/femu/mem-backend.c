@@ -112,3 +112,50 @@ int femu_rw_mem_backend_oc(struct femu_mbe *mbe, QEMUSGList *qsg,
 
     return 0;
 }
+
+int adversary_rw_mem_backend(Adversary *adv, QEMUSGList *qsg,
+        uint64_t *data_offset, bool is_write)
+{
+    int sg_cur_index = 0;
+    dma_addr_t sg_cur_byte = 0;
+    dma_addr_t cur_addr, cur_len;
+    uint64_t mb_oft = data_offset;
+
+    DMADirection dir = DMA_DIRECTION_FROM_DEVICE;
+
+    if (is_write) {
+        dir = DMA_DIRECTION_TO_DEVICE;
+    }
+
+    while (sg_cur_index < qsg->nsg) {
+        cur_addr = qsg->sg[sg_cur_index].base + sg_cur_byte;
+        cur_len = qsg->sg[sg_cur_index].len - sg_cur_byte;
+
+        // Find out how much
+        if (is_write) {
+            // TODO: Adversery should recive the write and then
+            // handle it. Probably something that will be done
+            // after `dma_memory_rw`
+            return 0;
+        }
+        else {
+            adversary_predict(adv, cur_addr, cur_len);
+        }
+
+        if (dma_memory_rw(qsg->as, cur_addr, adv->buffer, cur_len, dir)) {
+            error_report("FEMU: dma_memory_rw error");
+        }
+
+        mb_oft += cur_len;
+
+        sg_cur_byte += cur_len;
+        if (sg_cur_byte == qsg->sg[sg_cur_index].len) {
+            sg_cur_byte = 0;
+            ++sg_cur_index;
+        }
+    }
+
+    qemu_sglist_destroy(qsg);
+
+    return 0;        
+}

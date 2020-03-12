@@ -852,6 +852,10 @@ static uint16_t nvme_admin_cmd(FemuCtrl *n, NvmeCmd *cmd, NvmeCqe *cqe)
     case FEMU_OC12_ADM_CMD_SET_BB_TBL:
         femu_debug("set_bb_tbl\n");
         return femu_oc12_bbt_set(n, cmd, cqe);
+    case FEMU_ADVERSARY_CMD_ON:
+        adversary_toggle(&n->adversary);
+        adversary_log("Adversery ON: %d\n", n->adversary.ON);
+        return NVME_SUCCESS;
     case NVME_ADM_CMD_ACTIVATE_FW:
     case NVME_ADM_CMD_DOWNLOAD_FW:
     case NVME_ADM_CMD_SECURITY_SEND:
