@@ -65,6 +65,8 @@ void adversary_init_data(Adversary *adv)
         adv->data.sf.set = 0;
         adv->data.sf.pattern = '\00';
         break;
+    case ADVERSARY_PRNG_MT:
+        break;
     default:
         fprintf(stderr, "(adversary_feed) Unkown Adversary method [%u]\n", adv->method);
         break;
@@ -106,6 +108,18 @@ void adversary_feed(Adversary *adv, unsigned long adr, unsigned long len)
             }
         }
         break;
+    case ADVERSARY_PRNG_MT:
+        if (adv->data.mt.status == DONE)
+            return;
+        if (adv->data.mt.status == NOT_STARTED) {
+            adv->data.mt.sadr = adr;    
+        }
+        // We assume the buffer is 4k
+        // We should get 1024 numbers from one buffer
+        // TODO: generate 624 u32 numbers 
+        mtp_feed(adv->data.mt.mtp, adv->data.mt.sample);
+
+        break;
     default:
         fprintf(stderr, "(adversary_feed) Unkown Adversary method [%u]\n", adv->method);
         break;
@@ -137,6 +151,9 @@ void adversary_predict(Adversary *adv, unsigned long adr, unsigned long len)
         else {
             fprintf(stderr, "(adversary_predict) Static Fill is not 'set'\n");
         }
+        break;
+    case ADVERSARY_PRNG_MT:
+        mtp_predict_buffer(adv->data.mt.mtp, adv->buffer, adr, len);
         break;
     default:
         fprintf(stderr, "(adversary_predict) Unkown Adversary method [%u]\n", adv->method);

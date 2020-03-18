@@ -1,1 +1,2 @@
 obj-y += adversary.o
+obj-y += mtpredictor.o

@@ -9,6 +9,7 @@
 #define _ADVERSARY_H_
 
 #include <stdint.h>
+#include "mtpredictor.h"
 
 enum AdversaryMethod {
     ADVERSARY_ZERO_FILL = 0,
@@ -17,11 +18,23 @@ enum AdversaryMethod {
     _NUMBER_OF_VALUES,
 };
 
+enum MTStatus {
+    NOT_STARTED = 0,
+    STARTED,
+    DONE,
+};
+
 typedef union AdversaryMethodData {
     struct {
         int set;
         unsigned char pattern;
-    } sf;
+    } sf; /* ADVERSARY_ZERO_FILL */
+    struct {
+        enum MTStatus status;
+        MTPredictor mtp;
+        unsigned int sample[624];
+        unsigned char buf[4];
+    } mt; /* ADVERSARY_PRNG_MT */
 } AdversaryMethodData;
 
 typedef struct Adversary {
