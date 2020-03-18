@@ -65,8 +65,6 @@ u32 mtp_get_next(MTPredictor *mtp)
 // TODO:
 int mtp_predict_buffer(MTPredictor *mtp, void *buffer, unsigned long adr, unsigned long len)
 {
-    // I want to know if the length can be divided into 32 bit numbers
-    assert(len % 4 == 0);
     unsigned char *buf = buffer;
 
     for (unsigned long i = 0; i < len/4; i++) {

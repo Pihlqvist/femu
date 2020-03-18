@@ -32,6 +32,7 @@ typedef union AdversaryMethodData {
     struct {
         enum MTStatus status;
         MTPredictor mtp;
+        unsigned long sadr;
         unsigned int sample[624];
         unsigned char buf[4];
     } mt; /* ADVERSARY_PRNG_MT */
