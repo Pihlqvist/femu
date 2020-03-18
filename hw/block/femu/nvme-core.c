@@ -854,7 +854,16 @@ static uint16_t nvme_admin_cmd(FemuCtrl *n, NvmeCmd *cmd, NvmeCqe *cqe)
         return femu_oc12_bbt_set(n, cmd, cqe);
     case FEMU_ADVERSARY_CMD_ON:
         adversary_toggle(&n->adversary);
-        adversary_log("Adversery ON: %d\n", n->adversary.ON);
+        adversary_log("Adversary ON: %d\n", n->adversary.ON);
+        return NVME_SUCCESS;
+    case FEMU_ADVERSARY_CMD_METHOD:
+        nand_read_upper_t = le64_to_cpu(cmd->cdw10);
+        if ( adversary_set_method(&n->adversary, nand_read_upper_t) ) {
+            // We got a unassigned method number
+            fprintf(stderr, "Adversary method [%u] do not exist\n", nand_read_upper_t);
+            return NVME_INVALID_FORMAT;
+        }
+        adversary_log("Adversary Method: %u active\n", nand_read_upper_t);
         return NVME_SUCCESS;
     case NVME_ADM_CMD_ACTIVATE_FW:
     case NVME_ADM_CMD_DOWNLOAD_FW:

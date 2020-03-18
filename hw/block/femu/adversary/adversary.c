@@ -23,6 +23,8 @@ void adversary_init(Adversary *adv, unsigned long nbytes)
     adv->ON     = 0;    // Start adversary in 'off' mode
     adv->size   = nbytes;
     adv->buffer = g_malloc(nbytes);
+    adversary_init_data(adv);
+
     if (adv->buffer == NULL)
     {
         error_report("FEMU: cannot allocate %" PRId64 " bytes for emulating Adversary"
@@ -50,14 +52,64 @@ void adversary_destroy(Adversary *adv)
 }
 
 /*
+ * Initiate the adversaries data structure depedning on the method used
+ */
+void adversary_init_data(Adversary *adv)
+{
+    switch (adv->method)
+    {
+    case ADVERSARY_ZERO_FILL:
+        // Nothing need to be done
+        break;
+    case ADVERSARY_STATIC_FILL:
+        adv->data.sf.set = 0;
+        adv->data.sf.pattern = '\00';
+        break;
+    default:
+        fprintf(stderr, "(adversary_feed) Unkown Adversary method [%u]\n", adv->method);
+        break;
+    }
+}
+
+/*
  * TODO: Implement this method
  * This method gives the adversary the buffer that was inteneded to be written 
  * memory. This should be used to `train` the adversary so it's predictions
  * can match what would be written.
  */
-void adversary_feed(Adversary *adv, char *buff)
+void adversary_feed(Adversary *adv, unsigned long adr, unsigned long len)
 {
-    printf("ADVERSARY: feed_adversary\n");
+    printf("ADVERSARY: (adversary_feed)\t");
+    printf("adr: 0x%08X\t", adr);
+    printf("len: %lu\n", len);
+    unsigned char *buf;
+
+    assert(adv->size >= len);
+
+    switch (adv->method)
+    {
+    case ADVERSARY_ZERO_FILL:
+        // We don't need to do anything
+        break;
+    case ADVERSARY_STATIC_FILL:
+        buf = adv->buffer;
+        if (adv->data.sf.set == 0) {
+            adv->data.sf.set = 1;
+            adv->data.sf.pattern = buf[0];
+            // printf("adversary_feed:\t adv->data.set=%d\n", adv->data.sf.set);
+            // printf("adversary_feed:\t adv->data.set=%c\n", adv->data.sf.pattern);
+        }
+        for (unsigned long i = 0; i < len; i++) {
+            if ( buf[i] != adv->data.sf.pattern ) {
+                fprintf(stderr, "(adversary_feed) Static Fill got diffirent patterns\tbuf[i]=%c\tadv->data.pattern=%c\n", buf[i], adv->data.sf.pattern);
+                return;
+            }
+        }
+        break;
+    default:
+        fprintf(stderr, "(adversary_feed) Unkown Adversary method [%u]\n", adv->method);
+        break;
+    }
 }
 
 /*
@@ -66,9 +118,9 @@ void adversary_feed(Adversary *adv, char *buff)
  */
 void adversary_predict(Adversary *adv, unsigned long adr, unsigned long len)
 {
-    printf("ADVERSARY: adversary_predict\n");
-    printf("ADVERSARY: adr: %lu\t0x%08X\n", adr, adr);
-    printf("ADVERSARY: len: %lu\n", len);
+    printf("ADVERSARY: (adversary_predict)\t");
+    printf("adr: 0x%08X\t", adr);
+    printf("len: %lu\n", len);
 
     assert(adv->size >= len);
 
@@ -78,9 +130,16 @@ void adversary_predict(Adversary *adv, unsigned long adr, unsigned long len)
     case ADVERSARY_ZERO_FILL:
         memset(adv->buffer, 0, len);
         break;
-    
+    case ADVERSARY_STATIC_FILL:
+        if (adv->data.sf.set) {
+            memset(adv->buffer, adv->data.sf.pattern, len);
+        }
+        else {
+            fprintf(stderr, "(adversary_predict) Static Fill is not 'set'\n");
+        }
+        break;
     default:
-        fprintf(stderr, "Unkown Adversary method\n");
+        fprintf(stderr, "(adversary_predict) Unkown Adversary method [%u]\n", adv->method);
         break;
     }
     
@@ -93,4 +152,17 @@ void adversary_predict(Adversary *adv, unsigned long adr, unsigned long len)
 void adversary_toggle(Adversary *adv)
 {
     adv->ON = adv->ON ? 0 : 1;
+}
+
+/*
+ * Set any given method to active given a Adversary
+ */
+int adversary_set_method(Adversary *adv, long method)
+{
+    if (method >= _NUMBER_OF_VALUES)
+        return -1;
+
+    adv->method = (enum AdversaryMethod) method;
+    adversary_init_data(adv);
+    return 0;
 }

@@ -133,17 +133,20 @@ int adversary_rw_mem_backend(Adversary *adv, QEMUSGList *qsg,
 
         // Find out how much
         if (is_write) {
-            // TODO: Adversery should recive the write and then
-            // handle it. Probably something that will be done
-            // after `dma_memory_rw`
-            return 0;
+            // TODO: Do we need to prep anything else?
         }
         else {
+            // Fill adv buffer with a predicted buffer then send that to the host
             adversary_predict(adv, cur_addr, cur_len);
         }
 
         if (dma_memory_rw(qsg->as, cur_addr, adv->buffer, cur_len, dir)) {
             error_report("FEMU: dma_memory_rw error");
+        }
+
+        if (is_write) {
+            // Take the buffer we got from the host and feed the adversary
+            adversary_feed(adv, cur_addr, cur_len);
         }
 
         mb_oft += cur_len;
