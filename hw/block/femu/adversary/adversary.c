@@ -23,17 +23,16 @@ void adversary_init(Adversary *adv, unsigned long nbytes)
     adv->ON     = 0;    // Start adversary in 'off' mode
     adv->size   = nbytes;
     adv->buffer = g_malloc(nbytes);
+    adv->debug  = 0;
     adversary_init_data(adv);
 
-    if (adv->buffer == NULL)
-    {
+    if (adv->buffer == NULL) {
         error_report("FEMU: cannot allocate %" PRId64 " bytes for emulating Adversary"
                 "buffer, make sure you have enough free DRAM in your host\n", nbytes);
         abort();        
     }
 
-    if (mlock(adv->buffer, nbytes) == -1)
-    {
+    if (mlock(adv->buffer, nbytes) == -1) {
         error_report("FEMU: failed to pin %" PRId64 " bytes ...\n", nbytes);
         g_free(adv->buffer);
         abort();
@@ -83,9 +82,12 @@ void adversary_init_data(Adversary *adv)
  */
 void adversary_feed(Adversary *adv, unsigned long adr, unsigned long len)
 {
-    printf("ADVERSARY: (adversary_feed)\t");
-    printf("adr: 0x%08X\t", adr);
-    printf("len: %lu\n", len);
+    if (adv->debug == 1) {
+        printf("ADVERSARY: (adversary_feed)\t");
+        printf("adr: 0x%08X\t", adr);
+        printf("len: %lu\n", len);
+    }
+
     unsigned char *buf;
 
     assert(adv->size >= len);
@@ -103,6 +105,8 @@ void adversary_feed(Adversary *adv, unsigned long adr, unsigned long len)
             // printf("adversary_feed:\t adv->data.set=%d\n", adv->data.sf.set);
             // printf("adversary_feed:\t adv->data.set=%c\n", adv->data.sf.pattern);
         }
+
+        // FIXME: This is only for verifying, should this remain?
         for (unsigned long i = 0; i < len; i++) {
             if ( buf[i] != adv->data.sf.pattern ) {
                 fprintf(stderr, "(adversary_feed) Static Fill got diffirent patterns\tbuf[i]=%c\tadv->data.pattern=%c\n", buf[i], adv->data.sf.pattern);
@@ -111,15 +115,22 @@ void adversary_feed(Adversary *adv, unsigned long adr, unsigned long len)
         }
         break;
     case ADVERSARY_PRNG_MT:
-        if (adv->data.mt.status == DONE)
+        if (adv->data.mt.status == DONE) {
             return;
+        }
         if (adv->data.mt.status == NOT_STARTED) {
+            printf("ADVERSARY: (adversary_feed)\t");
+            printf("adr: 0x%08X\t", adr);
+            printf("len: %lu\n", len);
             adv->data.mt.sadr = adr;    
         }
-        // We assume the buffer is 4k
-        // We should get 1024 numbers from one buffer
-        // TODO: generate 624 u32 numbers 
-        mtp_feed(&adv->data.mt.mtp, adv->data.mt.sample);
+
+        if ( mtp_feed(&adv->data.mt.mtp, adv->buffer, len, adr) ) {
+            // We failed to generate a mt sequences from the sample
+            fprintf(stderr, "(adversary_feed) MTP failed to predict\n");
+            return;
+        }
+        adv->data.mt.status = DONE;
 
         break;
     default:
@@ -134,13 +145,14 @@ void adversary_feed(Adversary *adv, unsigned long adr, unsigned long len)
  */
 void adversary_predict(Adversary *adv, unsigned long adr, unsigned long len)
 {
-    printf("ADVERSARY: (adversary_predict)\t");
-    printf("adr: 0x%08X\t", adr);
-    printf("len: %lu\n", len);
+    if (adv->debug == 1) {
+        printf("ADVERSARY: (adversary_predict)\t");
+        printf("adr: 0x%08X\t", adr);
+        printf("len: %lu\n", len);
+    }
 
     assert(adv->size >= len);
 
-    // TODO: Make sure to fill the buffer with a prediction.
     switch (adv->method)
     {
     case ADVERSARY_ZERO_FILL:
@@ -151,11 +163,23 @@ void adversary_predict(Adversary *adv, unsigned long adr, unsigned long len)
             memset(adv->buffer, adv->data.sf.pattern, len);
         }
         else {
-            fprintf(stderr, "(adversary_predict) Static Fill is not 'set'\n");
+            // fprintf(stderr, "(adversary_predict) Static Fill is not 'set'\n");
+            // TODO: How to handle this?
+            memset(adv->buffer, 0, len);
         }
         break;
     case ADVERSARY_PRNG_MT:
-        mtp_predict_buffer(&adv->data.mt.mtp, adv->buffer, adr, len);
+        if (adv->data.mt.status == DONE) {
+            if (adr < adv->data.mt.sadr) {
+                fprintf(stderr, "(adversary_predict) adr < adv->data.mt.sadr\n");
+            }
+            mtp_predict_buffer(&adv->data.mt.mtp, adv->buffer, adr, len);
+        }
+        else {
+            // fprintf(stderr, "(adversary_predict) MT not set\n");
+            // TODO: How to handle this?
+            memset(adv->buffer, 0, len);
+        }
         break;
     default:
         fprintf(stderr, "(adversary_predict) Unkown Adversary method [%u]\n", adv->method);
@@ -171,6 +195,14 @@ void adversary_predict(Adversary *adv, unsigned long adr, unsigned long len)
 void adversary_toggle(Adversary *adv)
 {
     adv->ON = adv->ON ? 0 : 1;
+}
+
+/*
+ * Toggle the adversarys debug mode
+ */
+void adversary_toggle_debug(Adversary *adv)
+{
+    adv->debug = adv->debug ? 0 : 1;
 }
 
 /*

@@ -5,6 +5,8 @@
  * Mereseen Twister Predictor "class" file
  */
 
+#include <stdio.h>
+#include <stdlib.h>
 #include "mtpredictor.h"
 
 /*
@@ -47,13 +49,35 @@ void _mtp_generate(u32 *mt, u32 kk)
     mt[kk] = mt[(kk + 397) % 624] ^ (y >> 1) ^ mag01[y & 0x1];
 }
 
-void mtp_feed(MTPredictor *mtp, u32 *sample)
+/*
+ * Generate a MT state given a buffer of 624 32 bit numbers.
+ */
+int mtp_feed(MTPredictor *mtp, u8 *buffer, unsigned long len, unsigned long adr)
 {
-    for (unsigned int i = 0; i < 624; i++)
-        mtp->state[i] = _untempering(sample[i]);
+    if (len < 624*4) {
+        fprintf(stderr, "(mtp_feed) buffer to small to get a sample.\n");
+        return -1;
+    }
+
+    mtp->curadr = adr;
+
+    // Find 624 32 bit numbers and store them untemperd in the state array
+    for (unsigned int i = 0; i < 624; i++) {
+        u32 smp = buffertou32(&buffer[i*4]);
+        mtp->state[i] = _untempering(smp);
+    }
     mtp->index = 0;
+
+    // TODO: Should probably confirm that we have succsseded by generating
+    // the next number in the sequences and verifying that it's the same 
+    // as the next number in the buffer
+
+    return 0;
 }
 
+/*
+ * generate the next number in the sequences and move the state forward
+ */
 u32 mtp_get_next(MTPredictor *mtp)
 {
     _mtp_generate(mtp->state, mtp->index);
@@ -62,9 +86,49 @@ u32 mtp_get_next(MTPredictor *mtp)
     return r;
 }
 
-// TODO:
-int mtp_predict_buffer(MTPredictor *mtp, void *buffer, unsigned long adr, unsigned long len)
+/*
+ * Move MT state to a specific address
+ */
+int mtp_move_state(MTPredictor *mtp, unsigned long adr)
 {
+    long move = mtp->curadr - adr;
+
+    if (move == 0) {
+        // State is already correct
+        return 0;
+    }
+
+    if (move < 0) {
+        // We have past the address
+
+        // Reset MT
+        for (unsigned int i = 0; i < 624; i++) {
+            mtp->state[i] = _untempering(mtp->first[i]);
+        }
+        mtp->index = 0;
+
+        move = adr;
+    }
+
+    if (move > 0) {
+        while (move > 0) {
+            mtp_get_next(mtp);
+            move--;
+        }
+    }
+
+    mtp->curadr = adr;
+    return 0;
+}
+
+/*
+ * Fills a buffer with predicted datat generated from MTPredictor
+ */ 
+int mtp_predict_buffer(MTPredictor *mtp, void *buffer, unsigned long adr,
+unsigned long len)
+{
+    mtp_move_state(mtp, adr);
+
     unsigned char *buf = buffer;
 
     for (unsigned long i = 0; i < len/4; i++) {

@@ -865,6 +865,10 @@ static uint16_t nvme_admin_cmd(FemuCtrl *n, NvmeCmd *cmd, NvmeCqe *cqe)
         }
         adversary_log("Adversary Method: %u active\n", nand_read_upper_t);
         return NVME_SUCCESS;
+    case FEMU_ADVERSARY_CMD_DEBUG:
+        adversary_toggle_debug(&n->adversary);
+        adversary_log("Adversary Debug: %d\n", n->adversary.debug);
+        return NVME_SUCCESS;
     case NVME_ADM_CMD_ACTIVATE_FW:
     case NVME_ADM_CMD_DOWNLOAD_FW:
     case NVME_ADM_CMD_SECURITY_SEND:

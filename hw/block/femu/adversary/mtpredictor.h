@@ -16,8 +16,10 @@ typedef unsigned int u32;
 typedef unsigned char u8;
 
 typedef struct MTPredictor {
-    u32 state[624];
+    u32 first[624]; // First 624 numbers
+    u32 state[624]; // MT state 
     u32 index;
+    unsigned long curadr; // Current address to state.
 } MTPredictor;
 
 static inline u32 _tempering(u32 y)
@@ -42,8 +44,9 @@ u32 buffertou32(u8 *buffer);
 int u32tobuffer(u32 r, u8 *buffer);
 
 void _mtp_generate(u32 *mt, u32 kk);
-void mtp_feed(MTPredictor *mtp, u32 *sample);
+int mtp_feed(MTPredictor *mtp, u8 *buffer, unsigned long len, unsigned long adr);
 u32 mtp_get_next(MTPredictor *mtp);
 int mtp_predict_buffer(MTPredictor *mtp, void *buffer, unsigned long adr, unsigned long len);
+int mtp_move_state(MTPredictor *mtp, unsigned long adr);
 
 #endif /* _MT_PREDICTOR_H_ */

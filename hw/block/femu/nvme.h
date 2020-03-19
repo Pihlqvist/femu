@@ -734,7 +734,7 @@ enum FEMU_OC12_MetaState {
 enum FEMU_ADVERSARY_Commands {
     FEMU_ADVERSARY_CMD_ON = 0x9f,
     FEMU_ADVERSARY_CMD_METHOD = 0xa0,
-    FEMU_ADVERSARY_CMD_P2 = 0xa1,
+    FEMU_ADVERSARY_CMD_DEBUG = 0xa1,
 };
 
 typedef struct FEMU_OC12_GetL2PTbl {
