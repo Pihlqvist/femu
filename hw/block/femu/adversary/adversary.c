@@ -80,11 +80,12 @@ void adversary_init_data(Adversary *adv)
  * memory. This should be used to `train` the adversary so it's predictions
  * can match what would be written.
  */
-void adversary_feed(Adversary *adv, unsigned long adr, unsigned long len)
+void adversary_feed(Adversary *adv, unsigned long adr, unsigned long len, unsigned long slba)
 {
     if (adv->debug == 1) {
         printf("ADVERSARY: (adversary_feed)\t");
         printf("adr: 0x%08X\t", adr);
+        printf("slba: 0x%08X\t", slba);
         printf("len: %lu\n", len);
     }
 
@@ -115,6 +116,9 @@ void adversary_feed(Adversary *adv, unsigned long adr, unsigned long len)
         }
         break;
     case ADVERSARY_PRNG_MT:
+        if (adr < adv->data.mt.sadr) {
+            fprintf(stderr, "(adversary_feed) We did not start at address 0\n");
+        }
         if (adv->data.mt.status == DONE) {
             return;
         }
@@ -122,7 +126,7 @@ void adversary_feed(Adversary *adv, unsigned long adr, unsigned long len)
             printf("ADVERSARY: (adversary_feed)\t");
             printf("adr: 0x%08X\t", adr);
             printf("len: %lu\n", len);
-            adv->data.mt.sadr = adr;    
+            adv->data.mt.sadr = adr;
         }
 
         if ( mtp_feed(&adv->data.mt.mtp, adv->buffer, len, adr) ) {
@@ -143,11 +147,12 @@ void adversary_feed(Adversary *adv, unsigned long adr, unsigned long len)
  * Predict what would be stored in the given memory region given by `adr`
  * and `len`. Store this in the adversarys buffer.
  */
-void adversary_predict(Adversary *adv, unsigned long adr, unsigned long len)
+void adversary_predict(Adversary *adv, unsigned long adr, unsigned long len, unsigned long slba)
 {
     if (adv->debug == 1) {
         printf("ADVERSARY: (adversary_predict)\t");
         printf("adr: 0x%08X\t", adr);
+        printf("slba: 0x%08X\t", slba);
         printf("len: %lu\n", len);
     }
 

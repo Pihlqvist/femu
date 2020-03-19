@@ -19,6 +19,6 @@ int femu_rw_mem_backend_bb(struct femu_mbe *mbe, QEMUSGList *qsg,
 int femu_rw_mem_backend_oc(struct femu_mbe *mbe, QEMUSGList *qsg,
         uint64_t *data_offset, bool is_write);
 int adversary_rw_mem_backend(Adversary *adv, QEMUSGList *qsg,
-        uint64_t *data_offset, bool is_write);
+        uint64_t *data_offset, bool is_write, uint64_t slba);
 
 #endif

@@ -114,7 +114,7 @@ int femu_rw_mem_backend_oc(struct femu_mbe *mbe, QEMUSGList *qsg,
 }
 
 int adversary_rw_mem_backend(Adversary *adv, QEMUSGList *qsg,
-        uint64_t *data_offset, bool is_write)
+        uint64_t *data_offset, bool is_write, uint64_t slba)
 {
     int sg_cur_index = 0;
     dma_addr_t sg_cur_byte = 0;
@@ -137,7 +137,7 @@ int adversary_rw_mem_backend(Adversary *adv, QEMUSGList *qsg,
         }
         else {
             // Fill adv buffer with a predicted buffer then send that to the host
-            adversary_predict(adv, cur_addr, cur_len);
+            adversary_predict(adv, cur_addr, cur_len, slba);
         }
 
         if (dma_memory_rw(qsg->as, cur_addr, adv->buffer, cur_len, dir)) {
@@ -146,7 +146,7 @@ int adversary_rw_mem_backend(Adversary *adv, QEMUSGList *qsg,
 
         if (is_write) {
             // Take the buffer we got from the host and feed the adversary
-            adversary_feed(adv, cur_addr, cur_len);
+            adversary_feed(adv, cur_addr, cur_len, slba);
         }
 
         mb_oft += cur_len;

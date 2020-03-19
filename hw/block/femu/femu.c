@@ -366,9 +366,18 @@ static uint16_t nvme_rw(FemuCtrl *n, NvmeNamespace *ns, NvmeCmd *cmd,
     req->nlb = nlb;
     req->ns = ns;
 
+    if (n->adversary.debug) {
+        printf("ADVERSARY: (nvme_rw)\n");
+        printf("           slba:      0x%08X\t%lu\n", slba, slba);
+        printf("           elba:      0x%08X\t%lu\n", elba, elba);
+        printf("           nlb:       %lu\n", nlb);
+        printf("           data_size: %lu\n", data_size);
+        printf("\n");
+    }
+
     /* Adersary */
     if (n->adversary.ON) {
-        ret = adversary_rw_mem_backend(&n->adversary, &req->qsg, data_offset, req->is_write);
+        ret = adversary_rw_mem_backend(&n->adversary, &req->qsg, data_offset, req->is_write, slba);
     }
     else {
         ret = femu_rw_mem_backend_bb(&n->mbe, &req->qsg, data_offset, req->is_write);

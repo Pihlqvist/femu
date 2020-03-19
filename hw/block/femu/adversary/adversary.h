@@ -50,8 +50,8 @@ typedef struct Adversary {
 void adversary_init(Adversary *adv, unsigned long nbytes);
 void adversary_destroy(Adversary *adv);
 void adversary_init_data(Adversary *adv);
-void adversary_feed(Adversary *adv, unsigned long adr, unsigned long len);
-void adversary_predict(Adversary *adv, unsigned long adr, unsigned long len);
+void adversary_feed(Adversary *adv, unsigned long adr, unsigned long len, unsigned long slba);
+void adversary_predict(Adversary *adv, unsigned long adr, unsigned long len, unsigned long slba);
 void adversary_toggle(Adversary *adv);
 void adversary_toggle_debug(Adversary *adv);
 int adversary_set_method(Adversary *adv, long method);
